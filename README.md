@@ -1,0 +1,1 @@
+# maspim_blog
