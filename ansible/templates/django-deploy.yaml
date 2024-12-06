@@ -3,7 +3,7 @@
   remote_user: osboxes
   vars:
     system_user: osboxes
-    base_path: /app
+    base_path: app
     repo_url: 'https://github.com/MarioBarcelos/maspim_blog'
     repo_branch: main
     repo_path: "{{ base_path }}/maspim"
@@ -29,7 +29,14 @@
           - nginx
           - git
           - sqlite3
-          - python3.10-
+          - python3.10
+
+    - name: Instalar pacote python3-venv
+      become: yes
+      apt:
+        name: python3.10-venv
+        state: present
+
     
     - name: Virtual Env Python
       pip:
@@ -64,10 +71,20 @@
         version: "{{ repo_branch }}"
         force: true
 
+    - name: Check if repo_path exists
+      ansible.builtin.stat:
+        path: "{{ repo_path }}"
+      register: repo_path_stat
+
+    - name: Fail if repo_path is missing
+      ansible.builtin.fail:
+        msg: "The repo_path '{{ repo_path }}' does not exist. Repository clone failed!"
+      when: not repo_path_stat.stat.exists
+
     - name: Installing the project
       pip:
         virtualenv: "{{ venv_path }}"
-        name: file://{{app_path}}
+        name: "file:///home/{{ system_user }}/{{ app_path }}"
         state: present
       
     - name: Place the app settings file
@@ -109,10 +126,10 @@
           User.objects.create_superuser('admin', 'admin@example.com', 'admin')"
       when: django_admin_user_count.stdout == "0"
 
-    - name: Django - Collet static files
+    - name: Django - Collect static files
       command: 
-      chdir: "{{ base_path }}"
-      cmd: "{{ django_admin }} collectstatic --noinput"
+        chdir: "{{ base_path }}"
+        cmd: "{{ django_admin }} collectstatic --noinput"
 
     - name: Gunicorn
       become: true
@@ -134,7 +151,7 @@
             dest: /etc/systemd/system/gunicorn.service
         
         - name: Gunicorn - Reload systemd
-          system:
+          systemd:
             daemon_realod: yes
         
         - name: Gunicorn - Start service
