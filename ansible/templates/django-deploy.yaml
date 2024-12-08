@@ -10,7 +10,7 @@
     app_path: "{{ repo_path }}"
     app_name: blog
     settings_path: "{{ app_name }}.settings"
-    database_path: "{{ base_path }}/db.sqlite3"
+    database_path: "{{ playbook_dir }}/{{ base_path }}/db.sqlite3"
     venv_path: /home/{{ system_user }}/.venv
     django_admin: "{{ venv_path }}/bin/django-admin"
   environment:
@@ -109,15 +109,23 @@
     
     - name: Django - Get the database name
       command:
-        chdir: "{{ base_admin }}"
+        chdir: "{{ base_path }}"
         cmd: >-
           {{ django_admin }} shell -c
-          "from django.conf import settings;print(settings.DATABASE.default.NAME)"
+          "from django.conf import settings; print(settings.DATABASES['default']['NAME'])"
       register: django_db_name
+
+    - name: Debug - Verificar valor de django_db_name
+      debug:
+        msg: 
+          - "django_db_name.stdout: {{ django_db_name.stdout }}"
+          - "database_path: {{ database_path }}"
 
     - name: Django - Assert App is correctly set
       assert:
-        that: django_db_name.stdout == database_path
+        that:
+          - django_db_name.stdout | trim | quote == database_path | trim | quote
+        fail_msg: "Database path mismatch: expected {{ database_path }}, got {{ django_db_name.stdout }}"
 
     - name: Django - DB Migration
       command:
