@@ -7,7 +7,7 @@
     repo_url: 'https://github.com/MarioBarcelos/maspim_blog'
     repo_branch: main
     repo_path: "{{ base_path }}/maspim"
-    app_path: "{{ repo_path }}/maspim_blog"
+    app_path: "{{ repo_path }}"
     app_name: blog
     settings_path: "{{ app_name }}.settings"
     database_path: "{{ base_path }}/db.sqlite3"
@@ -62,6 +62,21 @@
         group: www-data
         mode: 0775
         recurse: true
+
+    - name: Ensure the repo_path is clean
+      become: true
+      file:
+        path: "{{ repo_path }}"
+        state: absent
+
+    - name: Create repo_path directory
+      become: true
+      file:
+        path: "{{ repo_path }}"
+        state: directory
+        owner: "{{ system_user }}"
+        group: www-data
+        mode: 0775
 
     - name: Repository Codebase
       git: 
